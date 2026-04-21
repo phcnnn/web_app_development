@@ -3,20 +3,20 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-.Python
+*.pyc
 
-# Virtual environments
+# Virtual environment
 venv/
-env/
 .venv/
-.env/
+env/
+ENV/
 
-# Flask instance folder (SQLite database)
+# Flask instance folder (contains SQLite DB and secret config)
 instance/
 
 # Environment variables
 .env
-*.env
+.env.*
 
 # IDE / Editor
 .vscode/
@@ -28,7 +28,10 @@ instance/
 .DS_Store
 Thumbs.db
 
-# Distribution / packaging
+# Logs
+*.log
+
+# Distribution / build
 dist/
 build/
 *.egg-info/
