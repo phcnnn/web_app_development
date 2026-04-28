@@ -1,6 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-# 注意：此處假設 Transaction 模型已在 app.models.transaction.py 中定義
-# from app.models.transaction import Transaction
+from app.models.transaction import Transaction
 
 main_bp = Blueprint('main', __name__)
 
@@ -8,48 +7,98 @@ main_bp = Blueprint('main', __name__)
 def index():
     """
     首頁：顯示當月統計與消費清單
-    1. 取得所有消費紀錄 (Transaction.get_all())
-    2. 計算當月總支出 (Transaction.get_monthly_total())
-    3. 渲染 index.html
     """
-    return render_template('index.html')
+    transactions = Transaction.get_all()
+    total_spending = Transaction.get_monthly_total()
+    return render_template('index.html', transactions=transactions, total_spending=total_spending)
 
 @main_bp.route('/add', methods=['POST'])
 def add_transaction():
     """
     新增消費紀錄
-    1. 從 request.form 取得 amount, category, memo
-    2. 驗證資料合法性
-    3. 呼叫 Transaction.create() 存入資料庫
-    4. 重導向至首頁
     """
-    # 邏輯實作將在後續階段完成
+    try:
+        amount_str = request.form.get('amount')
+        category = request.form.get('category')
+        memo = request.form.get('memo')
+
+        # 基本驗證
+        if not amount_str or not category:
+            flash("金額與類別為必填欄位！", "error")
+            return redirect(url_for('main.index'))
+        
+        amount = float(amount_str)
+        if amount <= 0:
+            flash("金額必須大於 0！", "error")
+            return redirect(url_for('main.index'))
+
+        # 呼叫 Model 建立紀錄
+        success = Transaction.create(amount, category, memo)
+        if success:
+            flash("新增成功！", "success")
+        else:
+            flash("新增失敗，請稍後再試。", "error")
+            
+    except ValueError:
+        flash("請輸入正確的金額格式！", "error")
+    except Exception as e:
+        flash(f"發生非預期錯誤：{e}", "error")
+
     return redirect(url_for('main.index'))
 
 @main_bp.route('/transactions/<int:transaction_id>/edit', methods=['GET'])
 def edit_page(transaction_id):
     """
     顯示編輯頁面
-    1. 根據 ID 取得紀錄 (Transaction.get_by_id())
-    2. 渲染 edit.html 並帶入紀錄資料
     """
-    return render_template('edit.html')
+    transaction = Transaction.get_by_id(transaction_id)
+    if not transaction:
+        flash("找不到該筆紀錄！", "error")
+        return redirect(url_for('main.index'))
+    
+    return render_template('edit.html', transaction=transaction)
 
 @main_bp.route('/transactions/<int:transaction_id>/update', methods=['POST'])
 def update_transaction(transaction_id):
     """
     更新消費紀錄
-    1. 從 request.form 取得更新後的 amount, category, memo
-    2. 呼叫 Transaction.update() 更新資料
-    3. 重導向至首頁
     """
-    return redirect(url_for('main.index'))
+    try:
+        amount_str = request.form.get('amount')
+        category = request.form.get('category')
+        memo = request.form.get('memo')
+
+        if not amount_str or not category:
+            flash("金額與類別為必填欄位！", "error")
+            return redirect(url_for('main.edit_page', transaction_id=transaction_id))
+
+        data = {
+            'amount': float(amount_str),
+            'category': category,
+            'memo': memo
+        }
+
+        success = Transaction.update(transaction_id, data)
+        if success:
+            flash("更新成功！", "success")
+            return redirect(url_for('main.index'))
+        else:
+            flash("更新失敗！", "error")
+            
+    except ValueError:
+        flash("請輸入正確的金額格式！", "error")
+    
+    return redirect(url_for('main.edit_page', transaction_id=transaction_id))
 
 @main_bp.route('/transactions/<int:transaction_id>/delete', methods=['POST'])
 def delete_transaction(transaction_id):
     """
     刪除消費紀錄
-    1. 呼叫 Transaction.delete() 刪除指定紀錄
-    2. 重導向至首頁
     """
+    success = Transaction.delete(transaction_id)
+    if success:
+        flash("紀錄已刪除！", "success")
+    else:
+        flash("刪除失敗！", "error")
+        
     return redirect(url_for('main.index'))

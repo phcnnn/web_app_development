@@ -1,73 +1,106 @@
-from datetime import datetime
-# 注意：此處假設 db 已在 app/__init__.py 中定義
-# 實作時需確保 flask_sqlalchemy 已正確初始化
 from app import db
+from datetime import datetime
 
 class Transaction(db.Model):
-    """消費紀錄模型"""
     __tablename__ = 'transactions'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     amount = db.Column(db.Float, nullable=False)
     category = db.Column(db.String(50), nullable=False)
-    memo = db.Column(db.String(200), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    memo = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     def __repr__(self):
-        return f'<Transaction {self.id}: {self.amount}>'
+        return f'<Transaction {self.id}: {self.category} ${self.amount}>'
 
-    # --- CRUD 方法 ---
+    def to_dict(self):
+        """將物件轉換為字典格式，方便 API 使用"""
+        return {
+            'id': self.id,
+            'amount': self.amount,
+            'category': self.category,
+            'memo': self.memo,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
 
-    @classmethod
-    def create(cls, amount, category, memo=None):
+    @staticmethod
+    def create(amount, category, memo=None):
         """新增一筆消費紀錄"""
-        new_record = cls(amount=amount, category=category, memo=memo)
-        db.session.add(new_record)
-        db.session.commit()
-        return new_record
-
-    @classmethod
-    def get_all(cls):
-        """取得所有消費紀錄，依時間降序排列"""
-        return cls.query.order_by(cls.created_at.desc()).all()
-
-    @classmethod
-    def get_by_id(cls, transaction_id):
-        """根據 ID 取得單一紀錄"""
-        return cls.query.get(transaction_id)
-
-    @classmethod
-    def update(cls, transaction_id, **kwargs):
-        """更新紀錄內容"""
-        record = cls.query.get(transaction_id)
-        if record:
-            for key, value in kwargs.items():
-                if hasattr(record, key):
-                    setattr(record, key, value)
+        try:
+            new_transaction = Transaction(
+                amount=amount,
+                category=category,
+                memo=memo
+            )
+            db.session.add(new_transaction)
             db.session.commit()
-        return record
+            return new_transaction
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error creating transaction: {e}")
+            return None
 
-    @classmethod
-    def delete(cls, transaction_id):
-        """刪除單一紀錄"""
-        record = cls.query.get(transaction_id)
-        if record:
-            db.session.delete(record)
-            db.session.commit()
-            return True
-        return False
+    @staticmethod
+    def get_all():
+        """取得所有消費紀錄，按時間倒序排序"""
+        try:
+            return Transaction.query.order_by(Transaction.created_at.desc()).all()
+        except Exception as e:
+            print(f"Error fetching all transactions: {e}")
+            return []
 
-    @classmethod
-    def get_total_spending(cls, year=None, month=None):
-        """
-        計算指定月份的總支出
-        若未提供年月，則預設為當前月份
-        """
-        now = datetime.utcnow()
-        year = year or now.year
-        month = month or now.month
-        
-        # 這裡簡化處理，實際建議使用更精確的日期範圍查詢
-        records = cls.query.all()
-        total = sum(r.amount for r in records if r.created_at.year == year and r.created_at.month == month)
-        return total
+    @staticmethod
+    def get_by_id(transaction_id):
+        """取得單筆消費紀錄"""
+        try:
+            return Transaction.query.get(transaction_id)
+        except Exception as e:
+            print(f"Error fetching transaction {transaction_id}: {e}")
+            return None
+
+    @staticmethod
+    def update(transaction_id, data):
+        """更新消費紀錄"""
+        try:
+            transaction = Transaction.query.get(transaction_id)
+            if transaction:
+                transaction.amount = data.get('amount', transaction.amount)
+                transaction.category = data.get('category', transaction.category)
+                transaction.memo = data.get('memo', transaction.memo)
+                db.session.commit()
+                return transaction
+            return None
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error updating transaction {transaction_id}: {e}")
+            return None
+
+    @staticmethod
+    def delete(transaction_id):
+        """刪除消費紀錄"""
+        try:
+            transaction = Transaction.query.get(transaction_id)
+            if transaction:
+                db.session.delete(transaction)
+                db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error deleting transaction {transaction_id}: {e}")
+            return False
+
+    @staticmethod
+    def get_monthly_total():
+        """計算當月總支出 (輔助方法，非 skill 硬性要求但 PRD 需要)"""
+        try:
+            now = datetime.utcnow()
+            # 簡單過濾當月 (實務上應考慮跨年)
+            current_month_transactions = Transaction.query.filter(
+                db.extract('month', Transaction.created_at) == now.month,
+                db.extract('year', Transaction.created_at) == now.year
+            ).all()
+            return sum(t.amount for t in current_month_transactions)
+        except Exception as e:
+            print(f"Error calculating monthly total: {e}")
+            return 0
