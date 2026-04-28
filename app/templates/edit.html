@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}編輯紀錄 - 快速小資記帳 QuickSpend{% endblock %}
+
+{% block content %}
+<section class="edit-transaction">
+    <h2>編輯消費紀錄</h2>
+    <!-- action URL 將由路由帶入 transaction_id -->
+    <form action="#" method="POST">
+        <div class="form-group">
+            <label>金額</label>
+            <input type="number" name="amount" value="0" required step="0.01">
+        </div>
+        <div class="form-group">
+            <label>類別</label>
+            <select name="category" required>
+                <option value="餐飲">餐飲</option>
+                <option value="交通">交通</option>
+                <option value="購物">購物</option>
+                <option value="娛樂">娛樂</option>
+                <option value="其他">其他</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>備忘錄</label>
+            <input type="text" name="memo" value="">
+        </div>
+        <div class="actions">
+            <button type="submit">更新紀錄</button>
+            <a href="{{ url_for('main.index') }}" class="btn-cancel">取消</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

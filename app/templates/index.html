@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}首頁 - 快速小資記帳 QuickSpend{% endblock %}
+
+{% block content %}
+<section class="summary">
+    <h2>本月總支出：$<span id="total-amount">0</span></h2>
+</section>
+
+<section class="add-transaction">
+    <h3>新增消費</h3>
+    <form action="{{ url_for('main.add_transaction') }}" method="POST">
+        <input type="number" name="amount" placeholder="金額" required step="0.01">
+        <select name="category" required>
+            <option value="" disabled selected>選擇類別</option>
+            <option value="餐飲">餐飲</option>
+            <option value="交通">交通</option>
+            <option value="購物">購物</option>
+            <option value="娛樂">娛樂</option>
+            <option value="其他">其他</option>
+        </select>
+        <input type="text" name="memo" placeholder="備忘錄 (選填)">
+        <button type="submit">存檔</button>
+    </form>
+</section>
+
+<section class="transaction-list">
+    <h3>消費紀錄</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>時間</th>
+                <th>類別</th>
+                <th>金額</th>
+                <th>備忘</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 迴圈顯示紀錄 -->
+            <tr>
+                <td colspan="5">尚未有消費紀錄。</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+{% endblock %}
