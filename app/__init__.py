@@ -20,3 +20,12 @@ def create_app():
     app.register_blueprint(main_bp)
 
     return app
+
+def init_db():
+    app = create_app()
+    with app.app_context():
+        import os
+        if not os.path.exists('instance'):
+            os.makedirs('instance')
+        db.create_all()
+        print("Database initialized successfully!")
